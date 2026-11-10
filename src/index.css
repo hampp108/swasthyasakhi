@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F7FAF8;
+    color: #243B35;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom scrollbars and audio wave animations */
+@keyframes pulse-wave {
+  0%, 100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-wave-bar {
+  animation: pulse-wave 1.2s ease-in-out infinite;
+}

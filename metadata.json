@@ -1,0 +1,10 @@
+{
+  "name": "SwasthyaSakhi – Voice Field Register for ASHA Workers",
+  "description": "Mobile-first AI-powered voice field register for ASHA workers in India. Eliminates manual typing with multilingual speech comprehension, clinical entity extraction, danger sign detection, and automated follow-ups.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
