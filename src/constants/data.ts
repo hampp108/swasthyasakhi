@@ -10,7 +10,7 @@ export const PRESET_ASHA_USERS: AshaUser[] = [
     subCentre: 'Doddaballapur Sector 2',
     phcName: 'Doddaballapur Taluk Hospital PHC',
     district: 'Bengaluru Rural, Karnataka',
-    avatarUrl: '/src/assets/images/asha_worker_profile_1794328374007.jpg',
+    avatarUrl: '/assets/images/asha_worker_profile_1794328374007.jpg',
     assignedHouseholds: 248,
   },
   {
@@ -22,7 +22,7 @@ export const PRESET_ASHA_USERS: AshaUser[] = [
     subCentre: 'Ward 4 Rural Cluster',
     phcName: 'Gowribidanur Road PHC',
     district: 'Bengaluru Rural, Karnataka',
-    avatarUrl: '/src/assets/images/asha_worker_profile_1794328374007.jpg',
+    avatarUrl: '/assets/images/asha_worker_profile_1794328374007.jpg',
     assignedHouseholds: 310,
   },
   {
@@ -34,7 +34,7 @@ export const PRESET_ASHA_USERS: AshaUser[] = [
     subCentre: 'Doddaballapur Sub-Centre Main',
     phcName: 'Doddaballapur Taluk Hospital PHC',
     district: 'Bengaluru Rural, Karnataka',
-    avatarUrl: '/src/assets/images/asha_worker_profile_1794328374007.jpg',
+    avatarUrl: '/assets/images/asha_worker_profile_1794328374007.jpg',
     assignedHouseholds: 520,
   },
 ];

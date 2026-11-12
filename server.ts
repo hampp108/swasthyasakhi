@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,22 +11,34 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+
+// Enable CORS for Vercel preview environments
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 
-// Initialize shared Gemini client
-const apiKey = process.env.GEMINI_API_KEY || '';
-const ai = apiKey
-  ? new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
+// Helper to get Gemini client dynamically
+function getAiClient() {
+  const apiKey = process.env.GEMINI_API_KEY || '';
+  if (!apiKey) return null;
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
       },
-    })
-  : null;
+    },
+  });
+}
 
 // Standard Predefined Danger Signs Guideline (NHM & WHO IMNCI standards)
 export const PREDEFINED_DANGER_SIGNS = {
@@ -51,14 +62,88 @@ export const PREDEFINED_DANGER_SIGNS = {
   ],
 };
 
+// Gnani.ai / Vachana Voice AI Key
+const GNANI_API_KEY =
+  process.env.GNANI_API_KEY ||
+  'vach_1ytE2CY5X2DwizhKWHqxkxdSZb1RgMIn8iB6Wc55bONYumLP05yM8FIqiTlbSioyhx6JZZtS3734mhuKkbVLOYElSdtyVIod_d4b212ba5ad512f99cc03db224d0387d';
+
 // Health Check
 app.get('/api/health', (req: Request, res: Response) => {
+  const ai = getAiClient();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     geminiConfigured: !!ai,
     model: 'gemini-3.8-flash',
+    gnaniVoiceAiConfigured: true,
+    gnaniModel: 'timbre-v3.0',
+    availableGnaniVoices: ['Shivani', 'Lakshmi', 'Riyaa', 'Kalpana', 'Chetana', 'Vasudha', 'Tarika'],
   });
+});
+
+// Gnani.ai / Vachana Indic Voice AI Synthesis Endpoint
+app.post('/api/gnani-tts', async (req: Request, res: Response) => {
+  try {
+    const { text, persona = 'woman', voice } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Text is required for TTS' });
+    }
+
+    // Map voice based on persona if not explicitly specified:
+    // Female Voices supported by timbre-v3.0 on Gnani Vachana:
+    // - 'Shivani': Warm, soothing Indian female voice (Didi / Healthcare Sister)
+    // - 'Lakshmi': Gentle maternal Indian female voice
+    // - 'Riyaa': Bright, playful young female / child voice (Chhoti Sakhi)
+    // - 'Chetana', 'Kalpana', 'Vasudha', 'Tarika'
+    let chosenVoice = voice;
+    if (!chosenVoice) {
+      chosenVoice = persona === 'child' ? 'Riyaa' : 'Shivani';
+    }
+
+    // Clean text: strip markdown characters
+    const cleanText = text.replace(/[*_#`~]/g, '').trim();
+
+    const gnaniResponse = await fetch('https://api.vachana.ai/api/v1/tts/inference', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key-ID': GNANI_API_KEY,
+      },
+      body: JSON.stringify({
+        text: cleanText,
+        voice: chosenVoice,
+        model: 'timbre-v3.0',
+        audio_config: {
+          container: 'wav',
+          sample_rate: 24000,
+        },
+      }),
+    });
+
+    if (!gnaniResponse.ok) {
+      const errText = await gnaniResponse.text();
+      console.warn('Gnani API error:', gnaniResponse.status, errText);
+      return res.status(gnaniResponse.status).json({
+        error: 'Gnani Voice AI inference failed',
+        details: errText,
+      });
+    }
+
+    // Stream the binary WAV directly to the client
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('X-Voice-Used', chosenVoice);
+    res.setHeader('X-Engine', 'Gnani-Vachana-AI');
+
+    const arrayBuffer = await gnaniResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return res.send(buffer);
+  } catch (err: any) {
+    console.error('Gnani TTS error:', err);
+    return res.status(500).json({
+      error: 'Failed to synthesize speech via Gnani Voice AI',
+      details: err?.message || 'Server error',
+    });
+  }
 });
 
 // Intelligent Extraction Endpoint
@@ -100,6 +185,7 @@ app.post('/api/extract', async (req: Request, res: Response) => {
     }
 
     let extractedData: any = null;
+    const ai = getAiClient();
 
     if (ai) {
       try {
@@ -285,6 +371,7 @@ app.post('/api/correct', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'currentRecord and correctionCommand are required' });
     }
 
+    const ai = getAiClient();
     if (ai) {
       try {
         const prompt = `You are SwasthyaSakhi voice assistant. An ASHA worker wants to correct a field in the current visit record using voice.
@@ -603,6 +690,7 @@ function applyFallbackCorrection(record: any, command: string, language: string)
 // Set up Vite in development or static serving in production
 async function startServer() {
   if (!isProduction) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -620,7 +708,12 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Only start standalone HTTP server in non-serverless environments
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
+export default app;

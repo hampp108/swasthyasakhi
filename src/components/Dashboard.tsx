@@ -94,7 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="hidden md:block md:col-span-5 h-full min-h-[250px] relative">
             <img
-              src="/src/assets/images/field_health_visit_1794328374926.jpg"
+              src="/assets/images/field_health_visit_1794328374926.jpg"
               alt="ASHA worker conducting home visit in Indian village"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

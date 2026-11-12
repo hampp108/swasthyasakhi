@@ -136,7 +136,7 @@ export const VisitRecordSummary: React.FC<VisitRecordSummaryProps> = ({
                   title="Tap to toggle between Woman and Child voice"
                   className="text-[10px] font-bold bg-white text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 hover:border-[#16866A] shadow-2xs"
                 >
-                  Voice: {ttsService.getPersona() === 'child' ? "Child (Chhoti Sakhi)" : "Woman (Didi)"} ⇄
+                  Voice: {ttsService.getSelectedGnaniVoice()} (Gnani AI) ⇄
                 </button>
               </div>
               <p className="text-[11px] text-slate-500">Audio verification in your selected language</p>

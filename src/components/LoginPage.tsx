@@ -136,13 +136,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#16866A] flex items-center gap-1.5">
                 <Volume2 className="w-4 h-4" />
-                <span>Assistant Voice Persona:</span>
+                <span>Gnani Voice AI Engine:</span>
               </span>
-              <span className="text-[11px] text-slate-500 font-medium">Spoken Read-back</span>
+              <span className="text-[10px] font-bold bg-emerald-100 text-[#16866A] px-2 py-0.5 rounded-full border border-emerald-200">
+                Timbre v3.0 Active
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {/* Option 1: Woman's Voice */}
+              {/* Option 1: Woman's Voice (Shivani) */}
               <button
                 type="button"
                 onClick={() => handleTestVoicePersona('woman')}
@@ -160,15 +162,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     )}
                   </div>
                   <span className="text-[10px] text-slate-500 block leading-tight">
-                    Warm elder sister (Didi)
+                    "Didi" (Shivani · Gnani)
                   </span>
                 </div>
-                <span className="text-[10px] bg-emerald-100 text-[#16866A] font-semibold px-1.5 py-0.5 rounded">
+                <span className="text-[10px] bg-emerald-100 text-[#16866A] font-bold px-1.5 py-0.5 rounded">
                   Test
                 </span>
               </button>
 
-              {/* Option 2: Small Child's Voice */}
+              {/* Option 2: Small Child's Voice (Riyaa) */}
               <button
                 type="button"
                 onClick={() => handleTestVoicePersona('child')}
@@ -186,10 +188,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     )}
                   </div>
                   <span className="text-[10px] text-slate-500 block leading-tight">
-                    Bright Chhoti Sakhi
+                    "Chhoti Sakhi" (Riyaa)
                   </span>
                 </div>
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded">
+                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
                   Test
                 </span>
               </button>

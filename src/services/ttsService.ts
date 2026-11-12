@@ -1,98 +1,108 @@
 /**
- * Text-to-Speech service using Web SpeechSynthesis API
- * Dedicated High-Quality Natural Female Voice Synthesizer
- * Rigorously filters out male voices and prioritizes gentle, warm maternal/sister voices (Didi)
- * Supports real-time barge-in interruption, pitch/rate controls, and voice selection
+ * Text-to-Speech service powered by Gnani.ai / Vachana Voice AI
+ * Features studio-quality Indian female voices:
+ * - 'Shivani': Compassionate, warm Indian healthcare sister (Didi)
+ * - 'Lakshmi': Gentle, maternal Indian female voice
+ * - 'Riyaa': Bright, playful young assistant (Chhoti Sakhi)
+ * - 'Kalpana', 'Chetana', 'Vasudha', 'Tarika'
+ * Supports instant playback via HTML5 Audio, barge-in interruption, and fallback to Web SpeechSynthesis
  */
 
 import { VoicePersona } from '../types';
+
+export interface GnaniVoiceOption {
+  id: string;
+  name: string;
+  gender: 'female' | 'child';
+  description: string;
+  isDefaultWoman?: boolean;
+  isDefaultChild?: boolean;
+}
+
+export const GNANI_VOICES: GnaniVoiceOption[] = [
+  {
+    id: 'Shivani',
+    name: 'Shivani',
+    gender: 'female',
+    description: 'Warm, compassionate Indian healthcare sister (Didi)',
+    isDefaultWoman: true,
+  },
+  {
+    id: 'Lakshmi',
+    name: 'Lakshmi',
+    gender: 'female',
+    description: 'Gentle, maternal Indian voice (Soothing cadence)',
+  },
+  {
+    id: 'Riyaa',
+    name: 'Riyaa',
+    gender: 'child',
+    description: 'Bright, cheerful young assistant (Chhoti Sakhi)',
+    isDefaultChild: true,
+  },
+  {
+    id: 'Kalpana',
+    name: 'Kalpana',
+    gender: 'female',
+    description: 'Articulate Hindi / Indian English female voice',
+  },
+  {
+    id: 'Chetana',
+    name: 'Chetana',
+    gender: 'female',
+    description: 'Clear, modern Indic female voice',
+  },
+  {
+    id: 'Vasudha',
+    name: 'Vasudha',
+    gender: 'female',
+    description: 'Traditional, empathetic elder voice',
+  },
+  {
+    id: 'Tarika',
+    name: 'Tarika',
+    gender: 'female',
+    description: 'Soft-spoken, melodic Indic female voice',
+  },
+];
 
 export interface TTSState {
   isSpeaking: boolean;
   isPaused: boolean;
   currentText: string;
   persona: VoicePersona;
-  selectedVoiceName?: string;
+  selectedGnaniVoice: string;
+  engine: 'Gnani.ai Voice AI' | 'Browser Synthesizer';
   availableVoices: { name: string; lang: string; isFemale: boolean }[];
 }
 
 type TTSListener = (state: TTSState) => void;
 
-// Strict exclusion list of known male voice indicators
-const MALE_VOICE_KEYWORDS = [
-  'david',
-  'mark',
-  'george',
-  'james',
-  'richard',
-  'ravi',
-  'prabhat',
-  'guy',
-  'brian',
-  'daniel',
-  'alex',
-  'fred',
-  'male',
-  'stefan',
-  'oliver',
-  'diego',
-  'jorge',
-  'thomas',
-  'sin-ji',
-  'russell',
-  'sean',
-  'paul',
-  'arthur',
-  'reed',
-  'bruce',
-  'ralph',
-  'junior',
-];
-
-// Priority list of known high-quality female voice names (Indian, UK, US, Global)
-const FEMALE_VOICE_PRIORITY = [
-  'heera',          // Microsoft Heera (Indian English Female)
-  'kalpana',        // Microsoft Kalpana (Hindi Female)
-  'veena',          // Apple Veena (Indian English Female)
-  'neerja',         // Indian Female
-  'sangeeta',       // Indian Female
-  'kavya',          // Indian Female
-  'swara',          // Indian Female
-  'google हिन्दी', // Google Hindi (Natural Female)
-  'google uk english female',
-  'google us english',
-  'samantha',       // Apple Samantha (Warm Female)
-  'zira',           // Microsoft Zira (Female)
-  'victoria',       // Apple Victoria
-  'karen',          // Apple Karen (Australian/Global Female)
-  'moira',          // Apple Moira
-  'tessa',          // Apple Tessa
-  'hazel',          // Microsoft Hazel (UK Female)
-  'susan',          // Microsoft Susan
-  'catherine',      // Microsoft Catherine
-  'fiona',          // Apple Fiona
-  'female',
-];
-
 class TTSService {
+  private currentAudio: HTMLAudioElement | null = null;
+  private currentAudioUrl: string | null = null;
   private synth: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private listeners: Set<TTSListener> = new Set();
   private persona: VoicePersona = 'woman';
-  private customVoiceName: string | null = null;
-  private cachedVoices: SpeechSynthesisVoice[] = [];
+  private selectedGnaniVoice = 'Shivani';
+  private activeEngine: 'Gnani.ai Voice AI' | 'Browser Synthesizer' = 'Gnani.ai Voice AI';
 
   private state: TTSState = {
     isSpeaking: false,
     isPaused: false,
     currentText: '',
     persona: 'woman',
+    selectedGnaniVoice: 'Shivani',
+    engine: 'Gnani.ai Voice AI',
     availableVoices: [],
   };
 
   constructor() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      this.synth = window.speechSynthesis;
+    if (typeof window !== 'undefined') {
+      if ('speechSynthesis' in window) {
+        this.synth = window.speechSynthesis;
+      }
 
       // Load stored preferences
       try {
@@ -102,127 +112,46 @@ class TTSService {
           this.state.persona = savedPersona;
         }
 
-        const savedVoice = localStorage.getItem('swasthya_sakhi_custom_voice');
+        const savedVoice = localStorage.getItem('swasthya_sakhi_gnani_voice');
         if (savedVoice) {
-          this.customVoiceName = savedVoice;
-          this.state.selectedVoiceName = savedVoice;
+          this.selectedGnaniVoice = savedVoice;
+          this.state.selectedGnaniVoice = savedVoice;
+        } else {
+          this.selectedGnaniVoice = this.persona === 'child' ? 'Riyaa' : 'Shivani';
+          this.state.selectedGnaniVoice = this.selectedGnaniVoice;
         }
       } catch {}
 
-      // Populate voices when loaded
-      this.populateVoices();
-      if (this.synth.onvoiceschanged !== undefined) {
+      this.populateBrowserVoices();
+      if (this.synth && this.synth.onvoiceschanged !== undefined) {
         this.synth.onvoiceschanged = () => {
-          this.populateVoices();
+          this.populateBrowserVoices();
         };
       }
     }
   }
 
-  private populateVoices() {
+  private populateBrowserVoices() {
     if (!this.synth) return;
-    this.cachedVoices = this.synth.getVoices();
-
-    const formatted = this.cachedVoices.map((v) => ({
+    const voices = this.synth.getVoices();
+    this.state.availableVoices = voices.map((v) => ({
       name: v.name,
       lang: v.lang,
-      isFemale: this.isLikelyFemale(v),
+      isFemale: !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('david'),
     }));
-
-    this.state.availableVoices = formatted;
-
-    // Pick best default female voice if none set
-    if (!this.customVoiceName) {
-      const bestFemale = this.findBestFemaleVoice('en-IN');
-      if (bestFemale) {
-        this.customVoiceName = bestFemale.name;
-        this.state.selectedVoiceName = bestFemale.name;
-      }
-    }
-
     this.notify();
-  }
-
-  private isLikelyFemale(voice: SpeechSynthesisVoice): boolean {
-    const nameLower = voice.name.toLowerCase();
-
-    // If explicit male keyword, reject
-    if (MALE_VOICE_KEYWORDS.some((kw) => nameLower.includes(kw))) {
-      return false;
-    }
-
-    // Check if voice name matches female priority list
-    if (FEMALE_VOICE_PRIORITY.some((kw) => nameLower.includes(kw))) {
-      return true;
-    }
-
-    // Check voice gender attribute if present
-    if ((voice as any).gender === 'female') {
-      return true;
-    }
-
-    // Default: if it does NOT match any male keywords and is Indian or Google, favor it
-    if (nameLower.includes('india') || nameLower.includes('hindi') || nameLower.includes('natural')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  private findBestFemaleVoice(languageCode = 'en-IN'): SpeechSynthesisVoice | null {
-    if (this.cachedVoices.length === 0 && this.synth) {
-      this.cachedVoices = this.synth.getVoices();
-    }
-
-    if (this.cachedVoices.length === 0) return null;
-
-    // If user explicitly picked a custom voice that exists, use it
-    if (this.customVoiceName) {
-      const explicit = this.cachedVoices.find((v) => v.name === this.customVoiceName);
-      if (explicit) return explicit;
-    }
-
-    const langLower = languageCode.toLowerCase();
-    const langPrefix = langLower.split('-')[0];
-
-    // Priority 1: Indian English or Hindi Female Voice
-    const indianFemale = this.cachedVoices.find(
-      (v) =>
-        (v.lang.toLowerCase().includes('in') || v.name.toLowerCase().includes('india')) &&
-        this.isLikelyFemale(v)
-    );
-    if (indianFemale) return indianFemale;
-
-    // Priority 2: Exact language code female voice
-    const exactLangFemale = this.cachedVoices.find(
-      (v) => v.lang.toLowerCase() === langLower && this.isLikelyFemale(v)
-    );
-    if (exactLangFemale) return exactLangFemale;
-
-    // Priority 3: Language prefix female voice (e.g. en-US, en-GB)
-    const prefixFemale = this.cachedVoices.find(
-      (v) => v.lang.toLowerCase().startsWith(langPrefix) && this.isLikelyFemale(v)
-    );
-    if (prefixFemale) return prefixFemale;
-
-    // Priority 4: Any verified female voice
-    const anyFemale = this.cachedVoices.find((v) => this.isLikelyFemale(v));
-    if (anyFemale) return anyFemale;
-
-    // Priority 5: Fallback to non-male voice
-    const nonMale = this.cachedVoices.find(
-      (v) => !MALE_VOICE_KEYWORDS.some((kw) => v.name.toLowerCase().includes(kw))
-    );
-    if (nonMale) return nonMale;
-
-    return this.cachedVoices[0];
   }
 
   public setPersona(persona: VoicePersona) {
     this.persona = persona;
     this.state.persona = persona;
+    // Set matching Gnani voice
+    this.selectedGnaniVoice = persona === 'child' ? 'Riyaa' : 'Shivani';
+    this.state.selectedGnaniVoice = this.selectedGnaniVoice;
+
     try {
       localStorage.setItem('swasthya_sakhi_voice_persona', persona);
+      localStorage.setItem('swasthya_sakhi_gnani_voice', this.selectedGnaniVoice);
     } catch {}
     this.notify();
   }
@@ -231,17 +160,17 @@ class TTSService {
     return this.persona;
   }
 
-  public setCustomVoice(voiceName: string) {
-    this.customVoiceName = voiceName;
-    this.state.selectedVoiceName = voiceName;
+  public setGnaniVoice(voiceName: string) {
+    this.selectedGnaniVoice = voiceName;
+    this.state.selectedGnaniVoice = voiceName;
     try {
-      localStorage.setItem('swasthya_sakhi_custom_voice', voiceName);
+      localStorage.setItem('swasthya_sakhi_gnani_voice', voiceName);
     } catch {}
     this.notify();
   }
 
-  public getSelectedVoiceName(): string | undefined {
-    return this.customVoiceName || this.state.selectedVoiceName;
+  public getSelectedGnaniVoice(): string {
+    return this.selectedGnaniVoice;
   }
 
   public subscribe(listener: TTSListener) {
@@ -256,41 +185,118 @@ class TTSService {
     this.listeners.forEach((l) => l({ ...this.state }));
   }
 
-  public speak(text: string, languageCode = 'en-IN'): Promise<void> {
+  /**
+   * Main Speak Method
+   * Synthesizes audio using Gnani.ai Voice AI (Timbre v3.0 model),
+   * with seamless fallback to browser speech synthesis if offline
+   */
+  public async speak(text: string, languageCode = 'en-IN'): Promise<void> {
+    // Barge-in: Cancel any currently active audio immediately
+    this.cancel();
+
+    if (!text || text.trim() === '') return;
+
+    const cleanText = text.replace(/[*_#`~]/g, '').trim();
+
+    try {
+      // 1. Try Gnani.ai Voice AI Server-side proxy
+      const voiceToUse =
+        this.selectedGnaniVoice || (this.persona === 'child' ? 'Riyaa' : 'Shivani');
+
+      const response = await fetch('/api/gnani-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: cleanText,
+          persona: this.persona,
+          voice: voiceToUse,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gnani API responded with status ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      this.currentAudioUrl = audioUrl;
+
+      return new Promise((resolve) => {
+        const audio = new Audio(audioUrl);
+        this.currentAudio = audio;
+        this.activeEngine = 'Gnani.ai Voice AI';
+
+        audio.onplay = () => {
+          this.state = {
+            ...this.state,
+            isSpeaking: true,
+            isPaused: false,
+            currentText: cleanText,
+            engine: 'Gnani.ai Voice AI',
+          };
+          this.notify();
+        };
+
+        audio.onended = () => {
+          this.cleanupAudio();
+          resolve();
+        };
+
+        audio.onerror = (e) => {
+          console.warn('Audio playback error, falling back to browser speech:', e);
+          this.cleanupAudio();
+          this.speakWithBrowserFallback(cleanText, languageCode).then(resolve);
+        };
+
+        audio.play().catch((err) => {
+          console.warn('Audio play auto-policy warning:', err);
+          this.cleanupAudio();
+          this.speakWithBrowserFallback(cleanText, languageCode).then(resolve);
+        });
+      });
+    } catch (err) {
+      console.warn('Gnani Voice AI unavailable, falling back to local synthesizer:', err);
+      return this.speakWithBrowserFallback(cleanText, languageCode);
+    }
+  }
+
+  // Fallback to browser SpeechSynthesis
+  private speakWithBrowserFallback(text: string, languageCode: string): Promise<void> {
     return new Promise((resolve) => {
-      if (!this.synth) {
-        console.warn('SpeechSynthesis is not supported in this browser environment');
-        return resolve();
-      }
+      if (!this.synth) return resolve();
 
-      // Barge-in: Cancel any active speech immediately
       this.cancel();
-
-      if (!text || text.trim() === '') {
-        return resolve();
-      }
-
-      const cleanText = text.replace(/[*_#]/g, '').trim();
-      const utterance = new SpeechSynthesisUtterance(cleanText);
+      const utterance = new SpeechSynthesisUtterance(text);
       this.currentUtterance = utterance;
+      this.activeEngine = 'Browser Synthesizer';
 
-      // Select female voice
-      const chosenVoice = this.findBestFemaleVoice(languageCode);
-      if (chosenVoice) {
-        utterance.voice = chosenVoice;
-        this.state.selectedVoiceName = chosenVoice.name;
+      const voices = this.synth.getVoices();
+      const femaleVoice =
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes('in') &&
+            !v.name.toLowerCase().includes('david') &&
+            !v.name.toLowerCase().includes('male')
+        ) ||
+        voices.find(
+          (v) =>
+            (v.name.toLowerCase().includes('female') ||
+              v.name.toLowerCase().includes('zira') ||
+              v.name.toLowerCase().includes('samantha')) &&
+            !v.name.toLowerCase().includes('david')
+        ) ||
+        voices[0];
+
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
       }
 
-      // Authentic Female Tone Tuning:
       if (this.persona === 'child') {
-        // Child's Voice ("Chhoti Sakhi"): Elevated pitch, lively cadence
         utterance.pitch = 1.45;
         utterance.rate = 1.0;
       } else {
-        // Woman's Voice ("Didi / Healthcare Sister"):
-        // Soft, warm, compassionate, calm cadence
-        utterance.pitch = 1.08; // Clear natural feminine register
-        utterance.rate = 0.88;  // Measured cadence so medical instructions are reassuring and crisp
+        utterance.pitch = 1.08;
+        utterance.rate = 0.88;
       }
 
       utterance.onstart = () => {
@@ -298,36 +304,19 @@ class TTSService {
           ...this.state,
           isSpeaking: true,
           isPaused: false,
-          currentText: cleanText,
-          persona: this.persona,
+          currentText: text,
+          engine: 'Browser Synthesizer',
         };
         this.notify();
       };
 
       utterance.onend = () => {
-        this.state = {
-          ...this.state,
-          isSpeaking: false,
-          isPaused: false,
-          currentText: '',
-          persona: this.persona,
-        };
-        this.currentUtterance = null;
-        this.notify();
+        this.cleanupUtterance();
         resolve();
       };
 
-      utterance.onerror = (e) => {
-        console.warn('TTS error or cancelled:', e);
-        this.state = {
-          ...this.state,
-          isSpeaking: false,
-          isPaused: false,
-          currentText: '',
-          persona: this.persona,
-        };
-        this.currentUtterance = null;
-        this.notify();
+      utterance.onerror = () => {
+        this.cleanupUtterance();
         resolve();
       };
 
@@ -335,24 +324,64 @@ class TTSService {
     });
   }
 
-  // Barge-in / interruption: immediately stops speaking
-  public cancel() {
-    if (this.synth) {
-      this.synth.cancel();
+  private cleanupAudio() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
+    if (this.currentAudioUrl) {
+      URL.revokeObjectURL(this.currentAudioUrl);
+      this.currentAudioUrl = null;
     }
     this.state = {
       ...this.state,
       isSpeaking: false,
       isPaused: false,
       currentText: '',
-      persona: this.persona,
     };
+    this.notify();
+  }
+
+  private cleanupUtterance() {
     this.currentUtterance = null;
+    this.state = {
+      ...this.state,
+      isSpeaking: false,
+      isPaused: false,
+      currentText: '',
+    };
+    this.notify();
+  }
+
+  // Barge-in / interruption: immediately stops speaking
+  public cancel() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
+    if (this.currentAudioUrl) {
+      URL.revokeObjectURL(this.currentAudioUrl);
+      this.currentAudioUrl = null;
+    }
+    if (this.synth) {
+      this.synth.cancel();
+    }
+    this.currentUtterance = null;
+    this.state = {
+      ...this.state,
+      isSpeaking: false,
+      isPaused: false,
+      currentText: '',
+    };
     this.notify();
   }
 
   public pause() {
-    if (this.synth && this.synth.speaking) {
+    if (this.currentAudio && !this.currentAudio.paused) {
+      this.currentAudio.pause();
+      this.state.isPaused = true;
+      this.notify();
+    } else if (this.synth && this.synth.speaking) {
       this.synth.pause();
       this.state.isPaused = true;
       this.notify();
@@ -360,7 +389,11 @@ class TTSService {
   }
 
   public resume() {
-    if (this.synth && this.synth.paused) {
+    if (this.currentAudio && this.currentAudio.paused) {
+      this.currentAudio.play();
+      this.state.isPaused = false;
+      this.notify();
+    } else if (this.synth && this.synth.paused) {
       this.synth.resume();
       this.state.isPaused = false;
       this.notify();
@@ -371,7 +404,7 @@ class TTSService {
     return { ...this.state };
   }
 
-  // Test sample speech
+  // Test sample speech with Gnani Voice AI
   public preview(persona: VoicePersona, languageCode = 'en-IN') {
     this.setPersona(persona);
     const sample =

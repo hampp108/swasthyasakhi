@@ -97,17 +97,17 @@ export const Header: React.FC<HeaderProps> = ({
             {voicePersona === 'child' ? (
               <>
                 <Baby className="w-3.5 h-3.5 text-amber-600" />
-                <span className="hidden sm:inline">Child Voice</span>
-                <span className="sm:hidden">Child</span>
+                <span className="hidden sm:inline">Riyaa (Child)</span>
+                <span className="sm:hidden">Riyaa</span>
               </>
             ) : (
               <>
                 <User className="w-3.5 h-3.5 text-[#16866A]" />
-                <span className="hidden sm:inline">Woman's Voice</span>
-                <span className="sm:hidden">Woman</span>
+                <span className="hidden sm:inline">Shivani (Woman)</span>
+                <span className="sm:hidden">Shivani</span>
               </>
             )}
-            <Volume2 className="w-3 h-3 text-slate-400" />
+            <Volume2 className="w-3 h-3 text-[#16866A]" />
           </button>
 
           {/* Emergency Alert Indicator */}
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200">
                 <img
-                  src={currentUser.avatarUrl || '/src/assets/images/asha_worker_profile_1794328374007.jpg'}
+                  src={currentUser.avatarUrl || '/assets/images/asha_worker_profile_1794328374007.jpg'}
                   alt={currentUser.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

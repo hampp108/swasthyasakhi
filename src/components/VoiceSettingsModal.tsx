@@ -7,12 +7,11 @@ import {
   Sparkles,
   Baby,
   User,
-  Sliders,
   ShieldCheck,
-  RotateCcw,
+  Zap,
 } from 'lucide-react';
 import { VoicePersona } from '../types';
-import { ttsService, TTSState } from '../services/ttsService';
+import { ttsService, TTSState, GNANI_VOICES } from '../services/ttsService';
 
 interface VoiceSettingsModalProps {
   isOpen: boolean;
@@ -30,17 +29,15 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
   languageCode,
 }) => {
   const [ttsState, setTtsState] = useState<TTSState>(ttsService.getState());
-  const [selectedVoice, setSelectedVoice] = useState<string>(
-    ttsService.getSelectedVoiceName() || ''
+  const [selectedGnaniVoice, setSelectedGnaniVoice] = useState<string>(
+    ttsService.getSelectedGnaniVoice() || 'Shivani'
   );
   const [isPlayingSample, setIsPlayingSample] = useState(false);
 
   useEffect(() => {
     const unsub = ttsService.subscribe((state) => {
       setTtsState(state);
-      if (state.selectedVoiceName) {
-        setSelectedVoice(state.selectedVoiceName);
-      }
+      setSelectedGnaniVoice(state.selectedGnaniVoice);
       setIsPlayingSample(state.isSpeaking);
     });
     return () => unsub();
@@ -53,19 +50,15 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
     ttsService.preview(persona, languageCode);
   };
 
-  const handleSelectCustomVoice = (voiceName: string) => {
-    setSelectedVoice(voiceName);
-    ttsService.setCustomVoice(voiceName);
+  const handleSelectVoice = (voiceId: string) => {
+    setSelectedGnaniVoice(voiceId);
+    ttsService.setGnaniVoice(voiceId);
     ttsService.preview(voicePersona, languageCode);
   };
 
   const handleTestCurrentVoice = () => {
     ttsService.preview(voicePersona, languageCode);
   };
-
-  // Filter voices that are female or recommended
-  const femaleVoices = ttsState.availableVoices.filter((v) => v.isFemale);
-  const displayVoices = femaleVoices.length > 0 ? femaleVoices : ttsState.availableVoices;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
@@ -77,11 +70,17 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
               <Volume2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-[#243B35]">
-                Voice Read-Back Settings
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-[#243B35]">
+                  Voice Read-Back Settings
+                </h2>
+                <span className="text-[10px] font-black bg-emerald-100 text-[#16866A] px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                  <Zap className="w-2.5 h-2.5 fill-current" />
+                  <span>Gnani.ai Timbre v3.0</span>
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                Natural Indian healthcare voice synthesizer
+                Connected to Gnani Voice AI · Studio Indian Voice Engine
               </p>
             </div>
           </div>
@@ -95,6 +94,24 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
 
         {/* Content Body */}
         <div className="p-5 space-y-5 overflow-y-auto">
+          {/* Active Engine Badge */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div>
+                <span className="text-xs font-bold text-emerald-950 block">
+                  Active Voice Model: Gnani Voice AI
+                </span>
+                <span className="text-[11px] text-emerald-700">
+                  Model: Timbre v3.0 · High-accuracy Indic Speech
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] font-mono font-bold bg-white px-2 py-1 rounded-md text-emerald-800 border border-emerald-200">
+              API: Connected
+            </span>
+          </div>
+
           {/* Section 1: Choose Persona */}
           <div className="space-y-2">
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">
@@ -127,10 +144,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                     Woman's Voice
                   </h3>
                   <span className="text-[11px] font-semibold text-[#16866A] block mt-0.5">
-                    "Didi" · Elder Sister
+                    "Didi" · Elder Sister (Shivani)
                   </span>
                   <p className="text-[11px] text-slate-500 mt-1 leading-tight">
-                    Warm, maternal, calm, compassionate tone for healthcare visits.
+                    Warm, maternal, compassionate Indian healthcare voice.
                   </p>
                 </div>
               </button>
@@ -160,52 +177,73 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                     Child's Voice
                   </h3>
                   <span className="text-[11px] font-semibold text-amber-700 block mt-0.5">
-                    "Chhoti Sakhi" · Little Helper
+                    "Chhoti Sakhi" · Little Helper (Riyaa)
                   </span>
                   <p className="text-[11px] text-slate-500 mt-1 leading-tight">
-                    Bright, cheerful, clear young voice, sweet and encouraging.
+                    Bright, cheerful, clear young voice, sweet and lively.
                   </p>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Section 2: Active System Synthesizer Voice */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700">
-                Selected Device Voice:
-              </span>
-              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
-                Verified Female Register
-              </span>
+          {/* Section 2: Gnani Female Voices List */}
+          <div className="space-y-2">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">
+              2. Select Gnani Indic Voice Model
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {GNANI_VOICES.map((v) => {
+                const isSelected = selectedGnaniVoice === v.id;
+                return (
+                  <div
+                    key={v.id}
+                    onClick={() => handleSelectVoice(v.id)}
+                    className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-2.5 ${
+                      isSelected
+                        ? 'border-[#16866A] bg-emerald-50/70 shadow-xs ring-1 ring-[#16866A]'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900">
+                          {v.name}
+                        </span>
+                        {v.isDefaultWoman && (
+                          <span className="text-[9px] bg-[#16866A] text-white px-1.5 py-0.2 rounded font-bold">
+                            Default Woman
+                          </span>
+                        )}
+                        {v.isDefaultChild && (
+                          <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.2 rounded font-bold">
+                            Default Child
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                        {v.description}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'border-[#16866A] bg-[#16866A] text-white'
+                          : 'border-slate-300'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            {displayVoices.length > 0 ? (
-              <select
-                value={selectedVoice}
-                onChange={(e) => handleSelectCustomVoice(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#16866A]"
-              >
-                {displayVoices.map((v, i) => (
-                  <option key={i} value={v.name}>
-                    {v.name} ({v.lang})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="text-xs text-slate-500 italic">
-                Using built-in natural female synthesizer
-              </p>
-            )}
-
-            <p className="text-[11px] text-slate-500">
-              Male voices are strictly excluded to guarantee a pleasant, warm woman's voice.
-            </p>
           </div>
 
           {/* Instant Test Button */}
-          <div className="pt-1">
+          <div className="pt-2">
             <button
               onClick={handleTestCurrentVoice}
               className="w-full py-3.5 rounded-2xl bg-[#16866A] hover:bg-[#13745c] text-white font-extrabold text-sm shadow-md shadow-[#16866A]/20 flex items-center justify-center gap-2 active:scale-98 transition-all"
@@ -213,8 +251,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
               <Play className="w-4 h-4 fill-current" />
               <span>
                 {isPlayingSample
-                  ? 'Playing Voice Sample...'
-                  : `Hear Sample: ${voicePersona === 'child' ? "Child's Voice" : "Woman's Voice"}`}
+                  ? 'Playing Gnani Voice Sample...'
+                  : `Hear Sample: ${selectedGnaniVoice} (${voicePersona === 'child' ? "Child" : "Woman"})`}
               </span>
             </button>
           </div>
@@ -222,7 +260,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Preferences saved automatically</span>
+          <span className="text-slate-500 flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#16866A]" />
+            <span>Gnani Vachana AI Model Active</span>
+          </span>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors"
