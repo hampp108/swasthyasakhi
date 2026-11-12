@@ -11,15 +11,24 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL || !!process.env.NETLIFY;
 
-// Enable CORS for Vercel preview environments
+// Enable CORS for Vercel & Netlify preview environments
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
+  }
+  next();
+});
+
+// Normalize Netlify functions path if forwarded via /.netlify/functions/api
+app.use((req, res, next) => {
+  if (req.url.startsWith('/.netlify/functions/api')) {
+    const stripped = req.url.replace('/.netlify/functions/api', '');
+    req.url = stripped.startsWith('/api') ? stripped : '/api' + stripped;
   }
   next();
 });
@@ -708,8 +717,8 @@ async function startServer() {
   });
 }
 
-// Only start standalone HTTP server in non-serverless environments
-if (!process.env.VERCEL) {
+// Only start standalone HTTP server in non-serverless environments (local dev / AI Studio)
+if (!process.env.VERCEL && !process.env.NETLIFY) {
   startServer().catch((err) => {
     console.error('Failed to start server:', err);
     process.exit(1);

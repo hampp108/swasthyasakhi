@@ -28,6 +28,7 @@ import { VoiceSettingsModal } from './components/VoiceSettingsModal';
 import { extractVisitNotes, correctVisitRecord } from './services/apiService';
 import { ttsService, TTSState } from './services/ttsService';
 import { Check, Mic, Volume2, Sparkles, Trash2, ShieldAlert, Wifi, Cloud } from 'lucide-react';
+import { safeStorage } from './utils/safeStorage';
 
 const STORAGE_KEYS = {
   USER: 'swasthya_sakhi_user_v1',
@@ -40,22 +41,24 @@ const STORAGE_KEYS = {
 export default function App() {
   // Current logged in ASHA worker
   const [currentUser, setCurrentUser] = useState<AshaUser | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USER);
-    if (saved) {
-      try {
+    try {
+      const saved = safeStorage.getItem(STORAGE_KEYS.USER);
+      if (saved) {
         return JSON.parse(saved);
-      } catch {}
-    }
+      }
+    } catch {}
     // Default to Anjali Bai for instant testability
     return PRESET_ASHA_USERS[0];
   });
 
   // Voice Persona: 'woman' (Didi) or 'child' (Chhoti Sakhi)
   const [voicePersona, setVoicePersona] = useState<VoicePersona>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PERSONA);
-    if (saved === 'child' || saved === 'woman') {
-      return saved;
-    }
+    try {
+      const saved = safeStorage.getItem(STORAGE_KEYS.PERSONA);
+      if (saved === 'child' || saved === 'woman') {
+        return saved;
+      }
+    } catch {}
     return 'woman';
   });
 
@@ -66,33 +69,35 @@ export default function App() {
 
   // Language state
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE);
-    if (saved) {
-      const found = LANGUAGES.find((l) => l.code === saved);
-      if (found) return found;
-    }
+    try {
+      const saved = safeStorage.getItem(STORAGE_KEYS.LANGUAGE);
+      if (saved) {
+        const found = LANGUAGES.find((l) => l.code === saved);
+        if (found) return found;
+      }
+    } catch {}
     return LANGUAGES[2]; // Default: Indian English
   });
 
   // Data state with LocalStorage persistence
   const [beneficiaries] = useState<Beneficiary[]>(SYNTHETIC_BENEFICIARIES);
   const [recentVisits, setRecentVisits] = useState<StructuredRecord[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.VISITS);
-    if (saved) {
-      try {
+    try {
+      const saved = safeStorage.getItem(STORAGE_KEYS.VISITS);
+      if (saved) {
         return JSON.parse(saved);
-      } catch {}
-    }
+      }
+    } catch {}
     return INITIAL_RECENT_VISITS;
   });
 
   const [followUpTasks, setFollowUpTasks] = useState<FollowUpTask[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.FOLLOW_UPS);
-    if (saved) {
-      try {
+    try {
+      const saved = safeStorage.getItem(STORAGE_KEYS.FOLLOW_UPS);
+      if (saved) {
         return JSON.parse(saved);
-      } catch {}
-    }
+      }
+    } catch {}
     return INITIAL_FOLLOW_UPS;
   });
 
@@ -125,25 +130,25 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Save changes to localStorage
+  // Save changes to safeStorage
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
+      safeStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(currentUser));
     } else {
-      localStorage.removeItem(STORAGE_KEYS.USER);
+      safeStorage.removeItem(STORAGE_KEYS.USER);
     }
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.VISITS, JSON.stringify(recentVisits));
+    safeStorage.setItem(STORAGE_KEYS.VISITS, JSON.stringify(recentVisits));
   }, [recentVisits]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.FOLLOW_UPS, JSON.stringify(followUpTasks));
+    safeStorage.setItem(STORAGE_KEYS.FOLLOW_UPS, JSON.stringify(followUpTasks));
   }, [followUpTasks]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.LANGUAGE, selectedLanguage.code);
+    safeStorage.setItem(STORAGE_KEYS.LANGUAGE, selectedLanguage.code);
   }, [selectedLanguage]);
 
   const showToast = (msg: string) => {
@@ -400,8 +405,8 @@ export default function App() {
     if (window.confirm('Reset all demo visits and tasks back to initial hackathon defaults?')) {
       setRecentVisits(INITIAL_RECENT_VISITS);
       setFollowUpTasks(INITIAL_FOLLOW_UPS);
-      localStorage.removeItem(STORAGE_KEYS.VISITS);
-      localStorage.removeItem(STORAGE_KEYS.FOLLOW_UPS);
+      safeStorage.removeItem(STORAGE_KEYS.VISITS);
+      safeStorage.removeItem(STORAGE_KEYS.FOLLOW_UPS);
       showToast('Demo registry reset to defaults');
     }
   };

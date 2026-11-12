@@ -9,6 +9,7 @@
  */
 
 import { VoicePersona } from '../types';
+import { safeStorage } from '../utils/safeStorage';
 
 export interface GnaniVoiceOption {
   id: string;
@@ -106,13 +107,13 @@ class TTSService {
 
       // Load stored preferences
       try {
-        const savedPersona = localStorage.getItem('swasthya_sakhi_voice_persona');
+        const savedPersona = safeStorage.getItem('swasthya_sakhi_voice_persona');
         if (savedPersona === 'child' || savedPersona === 'woman') {
           this.persona = savedPersona;
           this.state.persona = savedPersona;
         }
 
-        const savedVoice = localStorage.getItem('swasthya_sakhi_gnani_voice');
+        const savedVoice = safeStorage.getItem('swasthya_sakhi_gnani_voice');
         if (savedVoice) {
           this.selectedGnaniVoice = savedVoice;
           this.state.selectedGnaniVoice = savedVoice;
@@ -133,13 +134,15 @@ class TTSService {
 
   private populateBrowserVoices() {
     if (!this.synth) return;
-    const voices = this.synth.getVoices();
-    this.state.availableVoices = voices.map((v) => ({
-      name: v.name,
-      lang: v.lang,
-      isFemale: !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('david'),
-    }));
-    this.notify();
+    try {
+      const voices = this.synth.getVoices();
+      this.state.availableVoices = voices.map((v) => ({
+        name: v.name,
+        lang: v.lang,
+        isFemale: !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('david'),
+      }));
+      this.notify();
+    } catch {}
   }
 
   public setPersona(persona: VoicePersona) {
@@ -150,8 +153,8 @@ class TTSService {
     this.state.selectedGnaniVoice = this.selectedGnaniVoice;
 
     try {
-      localStorage.setItem('swasthya_sakhi_voice_persona', persona);
-      localStorage.setItem('swasthya_sakhi_gnani_voice', this.selectedGnaniVoice);
+      safeStorage.setItem('swasthya_sakhi_voice_persona', persona);
+      safeStorage.setItem('swasthya_sakhi_gnani_voice', this.selectedGnaniVoice);
     } catch {}
     this.notify();
   }
@@ -164,7 +167,7 @@ class TTSService {
     this.selectedGnaniVoice = voiceName;
     this.state.selectedGnaniVoice = voiceName;
     try {
-      localStorage.setItem('swasthya_sakhi_gnani_voice', voiceName);
+      safeStorage.setItem('swasthya_sakhi_gnani_voice', voiceName);
     } catch {}
     this.notify();
   }
